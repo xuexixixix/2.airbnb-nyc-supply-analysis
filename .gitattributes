@@ -1,0 +1,19 @@
+# 统一换行符：仓库内一律使用 LF，避免 Windows/macOS 协作者产生噪音 diff
+* text=auto eol=lf
+
+# 二进制文件不做换行转换
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.xlsx binary
+*.docx binary
+*.pdf  binary
+
+# Notebook 参与 diff 统计但默认折叠输出
+*.ipynb diff=jupyternotebook
+
+# 语言标注（GitHub 语言统计用）
+*.sql  linguist-language=SQL
+*.md   linguist-documentation
