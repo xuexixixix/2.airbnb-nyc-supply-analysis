@@ -125,6 +125,33 @@ def main() -> None:
         print("       候选口径：转为用 availability_365 修正，或直接采用官方口径")
 
     # ==========================================================
+    # 验证 5：官方估算到底靠什么算出来的？
+    # ==========================================================
+    section("验证 5 · estimated_occupancy_l365d 与评论数的关系")
+
+    # 这里要读一个新字段，重新载入该列
+    rev_ltm = pd.read_csv(LISTINGS, usecols=["number_of_reviews_ltm"])["number_of_reviews_ltm"]
+
+    occ_zero = occ == 0
+    rev_zero = rev_ltm == 0
+
+    print(f"    occupancy == 0            : {int(occ_zero.sum()):,}")
+    print(f"    number_of_reviews_ltm == 0: {int(rev_zero.sum()):,}")
+    print(f"    两者完全重合吗            : {bool((occ_zero == rev_zero).all())}")
+    print(f"    仅 occupancy=0 而评论>0    : {int((occ_zero & ~rev_zero).sum()):,}")
+    print(f"    仅 评论=0 而 occupancy>0   : {int((~occ_zero & rev_zero).sum()):,}")
+
+    if bool((occ_zero == rev_zero).all()):
+        print("\n    ✅ 判定：两者【完全等价】，零例外")
+        print("        → 官方出租率估算完全由评论数驱动，没有其他信息源")
+        print("        → 一个房源只要有 1~2 笔订单、恰好没人写评论，估算值就会归零")
+        print("        → 【重要】该字段对低销量房源是盲的，不能表述为「零订单」")
+        print("           按 50% 评论率估算：1 笔订单有 50% 概率零评论，")
+        print("           5 笔订单降到 3.1%，10 笔降到 0.1%")
+    else:
+        print("\n    ⚠️ 判定：存在不一致，估算方法不完全依赖评论数，需进一步排查")
+
+    # ==========================================================
     # 汇总
     # ==========================================================
     section("结论汇总")
