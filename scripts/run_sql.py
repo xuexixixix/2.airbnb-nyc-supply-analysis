@@ -11,6 +11,7 @@ run_sql.py — 执行 sql/ 目录下的查询文件
     python scripts/run_sql.py
 """
 
+import re
 import sys
 from pathlib import Path
 from urllib.parse import quote_plus
@@ -36,6 +37,36 @@ def build_dsn() -> str:
         f"mysql+pymysql://{c['user']}:{quote_plus(c['password'])}"
         f"@{c['host']}:{c['port']}/{c['database']}?charset={c['charset']}"
     )
+
+
+def split_statements(sql_text: str) -> list[str]:
+    """
+    把一个 SQL 文件切成多条独立语句。
+
+    做两件事：
+      1. 去掉注释（整行注释 + 行尾注释）
+      2. 按分号切分 —— SQL 用分号作为语句结束符
+
+    为什么需要它：
+      pymysql 默认一次只能执行一条语句。多条一起发会报
+      「You have an error in your SQL syntax ... near 'SELECT'」。
+
+    注意：这里按 -- 切注释，前提是 SQL 里不会出现包含 -- 的字符串
+    （本项目没有这种情况）。真用到时需换成更严谨的解析方式。
+    """
+    kept: list[str] = []
+    for line in sql_text.splitlines():
+        # 去掉行尾注释：GROUP BY l.id;   -- 这是注释
+        pos = line.find("--")
+        if pos >= 0:
+            line = line[:pos]
+        if line.strip():
+            kept.append(line)
+
+    body = "\n".join(kept)
+    parts = re.split(r";", body)
+
+    return [p.strip() for p in parts if p.strip()]
 
 
 def list_available() -> None:
@@ -80,33 +111,47 @@ def main() -> None:
 
     engine = create_engine(build_dsn())
 
-    # ⚠️ 这里刻意【不用】pd.read_sql(sql, engine)
-    #
-    # 原因：pandas 会对传入的 SQL 字符串做 % 参数替换。
-    # 一旦 SQL 或注释里出现百分号（比如注释写「44% 的房源」），
-    # pandas 就会把 % 后面的字当成格式符号，抛出
-    #   ValueError: unsupported format character '的'
-    #
-    # 改成自己执行 + 自己拼 DataFrame，绕开这个坑。
-    try:
-        with engine.connect() as conn:
-            result = conn.execute(text(sql))
-            rows = result.fetchall()
-            columns = list(result.keys())
-        df = pd.DataFrame(rows, columns=columns)
-    except Exception as e:
-        print(f"\n❌ 执行失败\n")
-        print(f"{type(e).__name__}: {e}")
-        print("\n💡 常见原因：")
-        print("   - SQL 语法错误（少了逗号、括号不配对、引号用了中文引号）")
-        print("   - 字段名写错（可用 SHOW COLUMNS FROM listings; 查看）")
-        print("   - 表名写错")
+    statements = split_statements(sql)
+    if not statements:
+        print("\n⚠️ 文件里没有可执行的 SQL（可能只有注释，或是空文件）")
         engine.dispose()
         sys.exit(1)
 
-    print(f"\n返回 {len(df):,} 行 × {len(df.columns)} 列\n")
-    print(df.to_string(index=False))
-    print()
+    if len(statements) > 1:
+        print(f"检测到 {len(statements)} 条查询，将依次执行\n")
+
+    for i, stmt in enumerate(statements, 1):
+        if len(statements) > 1:
+            print(f"--- 查询 {i}/{len(statements)} ---")
+
+        # ⚠️ 这里刻意【不用】pd.read_sql(sql, engine)
+        #
+        # 原因：pandas 会对传入的 SQL 字符串做 % 参数替换。
+        # 一旦 SQL 或注释里出现百分号（比如注释写「44% 的房源」），
+        # pandas 就会把 % 后面的字当成格式符号，抛出
+        #   ValueError: unsupported format character '的'
+        #
+        # 改成自己执行 + 自己拼 DataFrame，绕开这个坑。
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text(stmt))
+                rows = result.fetchall()
+                columns = list(result.keys())
+            df = pd.DataFrame(rows, columns=columns)
+        except Exception as e:
+            print(f"\n❌ 第 {i} 条查询执行失败\n")
+            print(f"{type(e).__name__}: {e}")
+            print("\n💡 常见原因：")
+            print("   - SQL 语法错误（少了逗号、括号不配对、引号用了中文引号）")
+            print("   - 字段名写错（可用 SHOW COLUMNS FROM listings; 查看）")
+            print("   - 表名写错")
+            print("   - 多条查询之间漏了分号 ;")
+            engine.dispose()
+            sys.exit(1)
+
+        print(f"\n返回 {len(df):,} 行 × {len(df.columns)} 列\n")
+        print(df.to_string(index=False))
+        print()
 
     engine.dispose()
 
