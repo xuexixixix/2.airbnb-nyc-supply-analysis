@@ -272,12 +272,130 @@ def chart_host_scale(engine):
     print("  ✅ 03_host_scale.png")
 
 
+# ============================================================
+#  图 4：街区级零评论率地图（交互式 HTML）
+#  数据来源：listings 按 neighbourhood_cleansed 聚合
+# ============================================================
+def chart_map(engine):
+    import json
+    import folium
+    import branca.colormap as cm
+
+    df = q(engine, """
+        SELECT neighbourhood_cleansed AS 街区,
+               neighbourhood_group_cleansed AS 行政区,
+               COUNT(*) AS 房源数,
+               ROUND(100.0*SUM(CASE WHEN number_of_reviews_ltm = 0 THEN 1 ELSE 0 END)
+                     /COUNT(*), 1) AS 零评论率,
+               ROUND(100.0*SUM(CASE WHEN minimum_nights >= 30 THEN 1 ELSE 0 END)
+                     /COUNT(*), 1) AS 长租占比
+        FROM listings
+        GROUP BY 街区, 行政区
+    """)
+
+    # 样本量不足的街区不参与着色（避免小样本噪声被当成信号）
+    MIN_N = 20
+    df["可用"] = df["房源数"] >= MIN_N
+    reliable = df[df["可用"]].copy()
+
+    geo = json.loads((PROJECT_ROOT / "data/raw/neighbourhoods.geojson")
+                     .read_text(encoding="utf-8"))
+
+    # 检查 geojson 与数据库的街区名是否对得上
+    geo_names = {f["properties"]["neighbourhood"] for f in geo["features"]}
+    db_names = set(df["街区"])
+    print(f"    geojson 街区 {len(geo_names)} 个 · 数据库街区 {len(db_names)} 个")
+    print(f"    两边都有的 {len(geo_names & db_names)} 个 · "
+          f"仅数据库有 {len(db_names - geo_names)} 个 · "
+          f"仅 geojson 有 {len(geo_names - db_names)} 个")
+
+    # 底图用 OpenStreetMap：免费、无需 API key
+    # （CartoDB positron 更好看，但现在需要申请 key，会加载不出来）
+    m = folium.Map(location=[40.70, -73.94], zoom_start=10.5,
+                   tiles="OpenStreetMap", control_scale=True)
+
+    # 顺序色阶：用 dataviz 参考配色的蓝色阶（浅=低，深=高）
+    colormap = cm.LinearColormap(
+        colors=["#e8f1fc", "#9ec5f4", "#5598e7", "#2a78d6", "#1c5cab", "#104281"],
+        vmin=float(reliable["零评论率"].min()),
+        vmax=float(reliable["零评论率"].max()),
+        caption="零评论率（过去 12 个月无评论的房源占比）",
+    )
+
+    # ⚠️ folium 的两个坑（都踩过了）
+    #   1. style_function 里【不能有闭包变量】——folium 转不成 JS，
+    #      结果是所有多边形都用默认样式，颜色一个都没写进去。
+    #   2. Choropleth 的 fill_color 只接受 ColorBrewer 字符串名，
+    #      不接受自定义的 branca 色阶对象。
+    #   解法：把颜色【预先算好、烤进 geojson 属性】，
+    #        style 函数只用最朴素的 lambda 读属性。
+    stats = reliable.set_index("街区")
+    for feat in geo["features"]:
+        name = feat["properties"]["neighbourhood"]
+        if name in stats.index:
+            row = stats.loc[name]
+            feat["properties"]["fill"] = colormap(float(row["零评论率"]))
+            feat["properties"]["房源数"] = f"{int(row['房源数']):,} 套"
+            feat["properties"]["零评论率"] = f"{row['零评论率']:.1f}%"
+            feat["properties"]["长租占比"] = f"{row['长租占比']:.1f}%"
+        else:
+            feat["properties"]["fill"] = "#e8e8e4"      # 样本不足 → 灰
+            feat["properties"]["房源数"] = "样本不足 20 套"
+            feat["properties"]["零评论率"] = "—"
+            feat["properties"]["长租占比"] = "—"
+
+    # 自动缩放视野到纽约市
+    m.fit_bounds([[40.49, -74.26], [40.92, -73.69]])
+
+    folium.GeoJson(
+        geo,
+        style_function=lambda feat: {
+            "fillColor": feat["properties"]["fill"],
+            "color": "#fcfcfb",
+            "weight": 0.8,
+            "fillOpacity": 0.82,
+        },
+        highlight_function=lambda feat: {"weight": 2, "color": "#0b0b0b"},
+        tooltip=folium.GeoJsonTooltip(
+            fields=["neighbourhood", "neighbourhood_group", "房源数", "零评论率", "长租占比"],
+            aliases=["街区：", "行政区：", "房源数：", "零评论率：", "长租型占比："],
+            style="font-family: system-ui, 'Microsoft YaHei', sans-serif; font-size: 13px;",
+            sticky=True,
+        ),
+    ).add_to(m)
+
+    colormap.add_to(m)
+
+    # 标题
+    title_html = f"""
+    <div style="position: fixed; top: 14px; left: 60px; z-index: 9999;
+                background: rgba(252,252,251,0.94); padding: 14px 20px;
+                border-radius: 6px; font-family: system-ui,'Microsoft YaHei',sans-serif;
+                box-shadow: 0 1px 6px rgba(11,11,11,0.12); max-width: 470px;">
+      <div style="font-size: 17px; font-weight: 700; color:#0b0b0b;">
+        零需求房源高度集中在长租型住宅区
+      </div>
+      <div style="font-size: 12px; color:#52514e; margin-top: 6px; line-height: 1.6;">
+        按街区统计 30,259 套房源中「过去 12 个月无评论」的比例。<br>
+        灰色街区为样本不足 20 套，未着色。<br>
+        <span style="color:#898781;">数据来源：Inside Airbnb · NYC 2026-06-14 快照</span>
+      </div>
+    </div>
+    """
+    m.get_root().html.add_child(folium.Element(title_html))
+
+    out = OUT / "04_map.html"
+    m.save(str(out))
+    print(f"  ✅ 04_map.html")
+
+
 def main():
     engine = create_engine(build_dsn())
     print("生成图表中 ...")
     chart_lifecycle(engine)
     chart_dimensions(engine)
     chart_host_scale(engine)
+    chart_map(engine)
     engine.dispose()
     print(f"\n输出目录：{OUT}")
 
