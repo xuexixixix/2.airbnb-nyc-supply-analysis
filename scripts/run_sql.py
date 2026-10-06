@@ -2,7 +2,7 @@
 run_sql.py — 执行 sql/ 目录下的查询文件
 
 用途
-    把 SQL 写进文件（方便存档 / 复用 / 给面试官看），用这个脚本执行。
+    把 SQL 写进文件（便于存档、复用与复核），用这个脚本执行。
 
 用法
     python scripts/run_sql.py sql/01_zero_review_by_area.sql

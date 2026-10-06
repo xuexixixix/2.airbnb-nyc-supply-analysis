@@ -567,7 +567,7 @@ Top 10 房东 = 10.0% 的平台供给。
 
 ### 发现库
 
-`docs/insights_collection.md` —— 35 条发现，每条附数据证据、代码位置与面试价值。
+`docs/insights_collection.md` —— 37 条发现，每条附数据证据与代码位置。
 
 ### 关键口径定义
 

@@ -111,7 +111,6 @@ Fort Hamilton       20.4% 零评论   长租占比 25.8%
 *一页看板：5 个 KPI + 生命周期构成 + 四维度对比 + 房东规模趋势 + 街区地图*
 
 **连接方式**：直连 MySQL（非导入 CSV），度量值用 DAX 编写。
-设计稿见 [`docs/powerbi_design_guide.md`](docs/powerbi_design_guide.md)，
 PDF 版见 [`reports/airbnb_nyc_dashboard.pdf`](reports/airbnb_nyc_dashboard.pdf)。
 
 ---
@@ -253,18 +252,20 @@ Power BI         交互式看板（设计稿见 docs/）
 
 ```
 airbnb-nyc-supply-analysis/
+├── README.md
+├── requirements.txt
+├── config.example.py       数据库配置模板
 ├── sql/                    13 个分析查询（00~12），每个 = 一个业务问题
 ├── scripts/                数据体检 / 口径验证 / 清洗 / 入库 / 绘图
 ├── docs/
 │   ├── 数据字典.md          字段含义 + 7 个数据陷阱
 │   ├── 指标体系.md          北极星 GMV + 因子拆解 + 维度拆解
 │   ├── 方法论_出租率估算.md  出租率反推方法与敏感性分析
-│   ├── insights_collection.md  35 条发现（每条附代码位置）
-│   ├── 分析路径规划.md      12 阶段进度
-│   └── powerbi_design_guide.md  Power BI 看板设计稿
+│   └── insights_collection.md  37 条发现（每条附代码位置）
 ├── reports/
-│   └── analysis_report.md   完整分析报告
-├── visualizations/         图表
+│   ├── analysis_report.md   完整分析报告（8 章）
+│   └── airbnb_nyc_dashboard.pdf  Power BI 看板导出
+├── visualizations/         4 张图表 + Power BI 截图
 └── data/                   原始数据（不入库）
 ```
 
