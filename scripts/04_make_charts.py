@@ -111,30 +111,43 @@ def q(engine, sql):
 # ============================================================
 #  图 1：生命周期三档（构成 + 关店率）
 #  数据来源：sql/10_listing_lifecycle.sql、sql/11_dormant_host_status.sql
+#
+#  ⚠️ 口径说明（两套算法，结果差 0.19%）
+#     本图使用【单表口径】，与 Power BI 看板保持一致：
+#         僵尸 = number_of_reviews = 0        （从未有任何评论）
+#         沉寂 = number_of_reviews > 0
+#                且 number_of_reviews_ltm = 0（曾有评论，近一年无）
+#         活跃 = 其余
+#
+#     对比：sql/10 与 sql/11 用的是【Join 口径】——Join reviews 表，
+#     自己按"快照日往前 365 天"划界。两套结果：
+#         单表：僵尸 8,559 · 沉寂 11,224 · 活跃 10,476
+#         Join：僵尸 8,559 · 沉寂 11,281 · 活跃 10,419   （差 57 套）
+#
+#     为什么本图选单表口径：
+#       1. 与 Power BI 看板一致 —— 同一个项目不能出现两套数字
+#       2. 更权威 —— number_of_reviews_ltm 是 Inside Airbnb 官方算的"近 12 个月"，
+#          而 Join 口径是我们自己拿 365 天硬凑的
+#     僵尸一档两套算法完全一致（都是 8,559），差异只出现在沉寂/活跃的边界上。
 # ============================================================
 def chart_lifecycle(engine):
     lifecycle = q(engine, """
         SELECT CASE
-                 WHEN 最后评论日期 IS NULL THEN '僵尸'
-                 WHEN 最后评论日期 >= DATE_SUB((SELECT MAX(last_scraped) FROM listings),
-                                              INTERVAL 365 DAY) THEN '活跃'
-                 ELSE '沉寂' END AS 状态,
+                 WHEN number_of_reviews = 0     THEN '僵尸'
+                 WHEN number_of_reviews_ltm = 0 THEN '沉寂'
+                 ELSE                                '活跃' END AS 状态,
                COUNT(*) AS 房源数
-        FROM (SELECT l.id, MAX(r.date) AS 最后评论日期
-              FROM listings l LEFT JOIN reviews r ON l.id = r.listing_id
-              GROUP BY l.id) t
+        FROM listings
         GROUP BY 状态
     """)
     closure = q(engine, """
         SELECT CASE
-                 WHEN 最后评论日期 IS NULL THEN '僵尸'
-                 WHEN 最后评论日期 >= DATE_SUB((SELECT MAX(last_scraped) FROM listings),
-                                              INTERVAL 365 DAY) THEN '活跃'
-                 ELSE '沉寂' END AS 状态,
-               ROUND(100.0 * SUM(CASE WHEN 可订天数 = 0 THEN 1 ELSE 0 END) / COUNT(*), 1) AS 关店率
-        FROM (SELECT l.id, l.availability_365 AS 可订天数, MAX(r.date) AS 最后评论日期
-              FROM listings l LEFT JOIN reviews r ON l.id = r.listing_id
-              GROUP BY l.id, l.availability_365) t
+                 WHEN number_of_reviews = 0     THEN '僵尸'
+                 WHEN number_of_reviews_ltm = 0 THEN '沉寂'
+                 ELSE                                '活跃' END AS 状态,
+               ROUND(100.0 * SUM(CASE WHEN availability_365 = 0 THEN 1 ELSE 0 END)
+                     / COUNT(*), 1) AS 关店率
+        FROM listings
         GROUP BY 状态
     """)
 
