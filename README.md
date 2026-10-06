@@ -104,6 +104,18 @@ Fort Hamilton       20.4% 零评论   长租占比 25.8%
 
 ---
 
+## 📈 Power BI 交互看板
+
+![Power BI 看板](visualizations/powerbi_dashboard.png)
+
+*一页看板：5 个 KPI + 生命周期构成 + 四维度对比 + 房东规模趋势 + 街区地图*
+
+**连接方式**：直连 MySQL（非导入 CSV），度量值用 DAX 编写。
+设计稿见 [`docs/powerbi_design_guide.md`](docs/powerbi_design_guide.md)，
+PDF 版见 [`reports/airbnb_nyc_dashboard.pdf`](reports/airbnb_nyc_dashboard.pdf)。
+
+---
+
 ## 💡 运营建议
 
 | 优先级 | 对象 | 数量 | 建议动作 |
