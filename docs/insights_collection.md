@@ -1283,8 +1283,27 @@ San Francisco Model 第 1 步为 `估算订单数 = 评论数 × 2`。
 
 ### 为什么值得记录
 
-该公式在**部分学术文献与二手资料中确实被写作 `× 0.5`**，属于流传较广的转述错误。
-本项目的做法是：**用业务逻辑对公式做常识校验，而非直接采信文献**。
+⚠️ **事后查证（2026-10-07）**：主流文献写的**全部是 ×2**，没有一处是 ×0.5。
+
+| 来源 | 公式 |
+|------|------|
+| Inside Airbnb 官方（San Francisco Model） | reviews ÷ 0.5 = **reviews × 2** |
+| EBHO 报告（引 Inside Airbnb 官网） | Review Rate **50%** to convert reviews to bookings |
+| Boston 市分析文档 | "actual bookings are estimated as **double** the number of reviews" |
+| 学术论文附录（Taylor & Francis） | "reviewrate is the **inflation factor, equal to 2**" |
+
+**这个 ×0.5 实际来自【检索引擎返回的摘要】** —— 而且那个摘要本身自相矛盾：
+前半句写「× 0.5」，后半句写「inflation factor of 2」。
+
+**教训因此升级了一层**：
+```
+原来以为：文献会错 → 要用业务逻辑验算
+实际情况：错不在文献，在【转述的那一层】
+        → 原始文献 → 检索工具摘要 → 转述，每一层都可能引入新错误
+```
+**→ 无论来源看着多权威，关键数字都要回到一手材料核验。**
+
+本项目的做法（依然成立）：**用业务逻辑对公式做常识校验，而非直接采信转述**。
 
 ### 影响
 
