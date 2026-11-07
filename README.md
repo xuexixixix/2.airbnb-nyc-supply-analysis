@@ -325,6 +325,8 @@ python scripts/run_sql.py sql/10_listing_lifecycle.sql
   保证本报告、matplotlib 图表与 Power BI 看板三处数字完全一致。
 - **小样本分组**：Shared room（42 套）、Staten Island（54 套）样本过小，结论仅供参考。
 - **因果不可反推**：持证与经营状况相关，但持证不是原因，而是「房东在认真做生意」的标记。
+- **统计推断的边界**：逻辑回归为观察性关联，不是因果；AUC 只衡量排序，未做概率校准；
+  Shared room（42 套）不作调整后结论，Hotel room 与持证共线不报调整后 OR。
 
 ---
 
