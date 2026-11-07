@@ -89,6 +89,12 @@
 
 ---
 
+### 统计推断：控制混杂后房型仍然显著
+
+对短租型（n = 5,540）拟合逻辑回归，控制行政区、房东规模、持证状态后：
+**Private vs Entire OR = 6.15（95% CI 5.00–7.57），房型联合检验 p < 0.001，AUC = 0.817。**
+房型差异不是这三个变量造成的。完整结果见 [`reports/inference_results.md`](reports/inference_results.md)。
+
 ## 📊 地理分布
 
 **🗺️ [点击查看街区级交互地图](visualizations/04_map.html)**
