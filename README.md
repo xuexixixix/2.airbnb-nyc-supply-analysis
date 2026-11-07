@@ -320,6 +320,21 @@ python scripts/run_sql.py sql/10_listing_lifecycle.sql
 
 ---
 
+## 🔐 敏感信息检查（2026-11-07）
+
+已完成六项检查，未发现敏感信息：
+
+- [x] **密码**：`config.py` 已被 `.gitignore` 排除；`config.example.py` 仅含占位符
+- [x] **绝对路径**：跟踪文件与 git 历史中无 `C:\` / `D:\` / `/Users/` / `/home/`
+- [x] **连接串**：脚本从 `config.py` / 环境变量读取，无硬编码凭据
+- [x] **notebook 输出**：无 `.ipynb` 入库；`__pycache__` 已忽略
+- [x] **截图**：6 张 PNG 无路径、账号、个人信息；元数据仅含 Matplotlib/DPI
+- [x] **git 历史**：未提交过 `config.py`、`.env`、CSV 或密码
+
+> 本地 `config.py` 含数据库密码，请勿提交；建议使用强密码。
+
+---
+
 ## 📄 数据来源
 
 [Inside Airbnb](https://insideairbnb.com/) —— 非营利短期租赁开放数据项目。
