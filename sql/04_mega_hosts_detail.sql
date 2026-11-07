@@ -41,3 +41,16 @@ FROM listings
 WHERE calculated_host_listings_count >= 20      -- 只看超级房东
 GROUP BY host_id
 ORDER BY 房源数 DESC;
+
+-- ============================================================
+--  配套查询：超级房东汇总（口径表用）
+-- ============================================================
+-- SELECT COUNT(*) AS 超级房东数,
+--        SUM(房源数) AS 房源总数,
+--        ROUND(100.0 * SUM(房源数) / (SELECT COUNT(*) FROM listings), 1) AS 占全部房源百分比
+-- FROM (
+--     SELECT host_id, COUNT(*) AS 房源数
+--     FROM listings
+--     GROUP BY host_id
+--     HAVING COUNT(*) >= 20
+-- ) t;

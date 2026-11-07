@@ -73,3 +73,13 @@ SELECT
 FROM listings
 GROUP BY 生命周期状态, 接客状态
 ORDER BY 生命周期状态, 接客状态;
+
+-- ============================================================
+--  配套查询：退出房东数与历史评论总数（口径表用）
+-- ============================================================
+-- SELECT COUNT(DISTINCT host_id) AS 退出房东数,
+--        SUM(number_of_reviews)  AS 历史评论总数
+-- FROM listings
+-- WHERE number_of_reviews > 0
+--   AND number_of_reviews_ltm = 0
+--   AND availability_365 = 0;

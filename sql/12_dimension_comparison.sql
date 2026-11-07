@@ -92,6 +92,20 @@ ORDER BY 极差百分点 DESC;
 -- FROM listings WHERE minimum_nights < 30 GROUP BY 分组 ORDER BY 零评论率 DESC;
 
 -- ============================================================
+--  配套查询 C：房型 × 持证组合（报告「建议 4」的 5 个组合）
+--  口径：仅整租 / 独立间；样本 >= 50；不含 Hotel room / Shared room
+-- ============================================================
+-- SELECT room_type AS 房型,
+--        CASE WHEN license IS NULL THEN '无记录' WHEN license='Exempt' THEN '已豁免'
+--             ELSE '有执照' END AS 持证状态,
+--        COUNT(*) AS 样本数,
+--        ROUND(100.0*SUM(CASE WHEN number_of_reviews_ltm=0 THEN 1 ELSE 0 END)/COUNT(*),1) AS 零评论率
+-- FROM listings
+-- WHERE minimum_nights < 30 AND room_type IN ('Entire home/apt','Private room')
+-- GROUP BY 房型, 持证状态 HAVING COUNT(*) >= 50
+-- ORDER BY 零评论率 DESC;
+
+-- ============================================================
 --  配套查询 B：稀释效应验证（各行政区的长租型占比）
 -- ============================================================
 -- SELECT neighbourhood_group_cleansed AS 行政区, COUNT(*) AS 总计,
